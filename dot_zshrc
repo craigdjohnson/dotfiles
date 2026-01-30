@@ -1,0 +1,60 @@
+# ~/.zshrc  (interactive & used by VS Code’s env detection)
+typeset -U path PATH
+
+# Personal bins first (prepend) then any opt tool bins
+path=("$HOME/.local/bin" $path)
+for d in "$HOME"/.local/opt/*/bin(N-/); do
+    path=("$d" $path)
+done
+
+# Homebrew (optional - uncomment if needed after personal bins)
+# [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Return if non-interactive
+if [[ $- != *i* ]]; then
+    return
+fi
+
+###################################################################################################
+# Only interactive shells beyond this point
+###################################################################################################
+
+# Node Version Manager (NVM)
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+
+### Core options & history
+setopt auto_cd no_beep extended_glob hist_ignore_dups share_history interactive_comments prompt_subst
+
+### Completions
+autoload -Uz compinit
+compinit
+
+# Bash completion bridge for tools that need it
+autoload -U +X bashcompinit && bashcompinit
+
+# Terraform autocomplete (binary supports -install-autocomplete but retain existing behavior)
+if [[ -x $HOME/.local/bin/terraform ]]; then
+    complete -o nospace -C $HOME/.local/bin/terraform terraform
+fi
+
+# uv (Python packaging) completion if available
+if command -v uv >/dev/null 2>&1; then
+    eval "$(uv generate-shell-completion zsh 2>/dev/null)"
+fi
+
+# goreleaser completion if available
+if command -v goreleaser >/dev/null 2>&1; then
+    eval "$(goreleaser completion zsh 2>/dev/null)"
+fi
+
+###################################################################################################
+# Functions
+for func in $HOME/.local/scripts/functions/*.sh(N); do
+    source "$func"
+done
+
+###################################################################################################
+# Final environment tweaks
+export EDITOR="code --wait"
+export LESSHISTFILE=-
